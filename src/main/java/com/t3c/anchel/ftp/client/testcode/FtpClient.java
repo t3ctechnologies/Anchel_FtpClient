@@ -5,11 +5,16 @@ package com.t3c.anchel.ftp.client.testcode;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.waarp.common.logging.WaarpLogger;
+import org.waarp.common.logging.WaarpLoggerFactory;
+
+import com.t3c.anchel.ftp.client.WaarpFtp4jClient;
 import com.t3c.anchel.ftp.client.testcode.transaction.Ftp4JClientTransactionTest;
 import com.t3c.anchel.ftp.client.testcode.transaction.FtpClientThread;
 
@@ -40,6 +45,8 @@ public class FtpClient {
 	public static boolean init(String[] args) throws IOException {
 		// WaarpLoggerFactory.setDefaultFactory(new
 		// WaarpSlf4JLoggerFactory(null));
+		final WaarpLogger logger = WaarpLoggerFactory.getLogger(WaarpFtp4jClient.class);
+		
 		System.setProperty("javax.net.debug", "false");
 		String fileName = args[0];
 		int mode = Integer.parseInt(args[1]);
@@ -57,41 +64,34 @@ public class FtpClient {
 			System.exit(1);
 		}
 
-		server = args[2];
+		server = InetAddress.getByName(args[2]).getHostAddress();
 		port = 21;
 		username = args[3];
 		passwd = args[4];
 		account = args[5];
 		int type = mode;
+		numberThread = Integer.parseInt("1");
+		numberIteration = Integer.parseInt("1");
+
+		int delay = 0;
+		int isSSL = 0;
+		boolean shutdown = false;
+		Ftp4JClientTransactionTest client = new Ftp4JClientTransactionTest(server, port, username, passwd, account,
+				isSSL);
+		System.out.println("FTPClient to Gateway IPaddress :" +server);
+		if (!client.connect()) {
+			System.err.println("Cant connect");
+			logger.error("FtpClient is not connected with GatewayFtp Server");
+			FtpClient.numberKO.incrementAndGet();
+			return false;
+		}
+		logger.info("FtpClient is get connected with GatewayFtp Server");
 		if (type == 11 || type == -11) {
 			File linsharefile = new File(fileName);
 			String EncodedFile = linsharefile.getName();
 			localFilename = Base64_Testclass.encodeFile(fileName, EncodedFile);
 		} else {
 			localFilename = fileName;
-		}
-		numberThread = Integer.parseInt("1");
-		numberIteration = Integer.parseInt("1");
-
-		int delay = 0;
-		// if (args.length > 9) {
-		// delay = Integer.parseInt(args[9]);
-		// }
-		int isSSL = 0;
-		// if (args.length > 10) {
-		// isSSL = Integer.parseInt(args[10]);
-		// }
-		boolean shutdown = false;
-		// if (args.length > 11) {
-		// shutdown = Integer.parseInt(args[11]) > 0;
-		// }
-		// initiate Directories
-		Ftp4JClientTransactionTest client = new Ftp4JClientTransactionTest(server, port, username, passwd, account,
-				isSSL);
-		if (!client.connect()) {
-			System.err.println("Cant connect");
-			FtpClient.numberKO.incrementAndGet();
-			return false;
 		}
 		try {
 			for (int i = 0; i < numberThread; i++) {
